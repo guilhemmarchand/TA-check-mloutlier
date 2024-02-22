@@ -84,6 +84,15 @@ class CheckMLOutliers(StreamingCommand):
         validate=validators.Match("metric_index", r"^.*$"),
     )
 
+    span = Option(
+        doc="""
+        **Syntax:** **	span=****
+        **Description:** Time bucket span definition.""",
+        require=False,
+        default="span=10m",
+        validate=validators.Match("span", r"^.*$"),
+    )
+
     time_factor = Option(
         doc="""
         **Syntax:** **	time_factor=****
@@ -143,8 +152,14 @@ class CheckMLOutliers(StreamingCommand):
             except:
                 outliers_earliest = "-30d"
 
+            # get span
+            try:
+                span = record[self.span]
+            except:
+                span = "span=10m"
+
             # build the Splunk query
-            search_query = f'| mstats avg({self.kpi_name}) as {self.kpi_name} where index="{self.metric_index}" entity="{entity_name}" by entity span="10m"'
+            search_query = f'| mstats avg({self.kpi_name}) as {self.kpi_name} where index="{self.metric_index}" entity="{entity_name}" by entity {span}'
 
             if time_factor:
                 search_query += f"""| eval factor={time_factor}"""
@@ -159,7 +174,7 @@ class CheckMLOutliers(StreamingCommand):
                 | fields _time {self.kpi_name} LowerBound UpperBound
                 | sort - 0 _time
                 | head 1
-                | eval isOutlier = if({self.kpi_name} > UpperBound, 1, 0)
+                | eval isLowerOutlier = if({self.kpi_name} < LowerBound, 1, 0), isUpperOutlier = if({self.kpi_name} > UpperBound, 1, 0)
             """
             )
 
@@ -197,22 +212,28 @@ class CheckMLOutliers(StreamingCommand):
                             f'Check ML Outliers, Processing results from ML check search, result="{json.dumps(item, indent=2)}"'
                         )
                         lowerBound_value = item["LowerBound"]
-                        isOutlier = item["isOutlier"]
+                        upperBound_value = item["UpperBound"]
+                        isLowerOutlier = item["isLowerOutlier"]
+                        isUpperOutlier = item["isUpperOutlier"]
                         yield_record["lowerBound"] = lowerBound_value
-                        yield_record["isOutlier"] = isOutlier
+                        yield_record["upperBound"] = upperBound_value
+                        yield_record["isLowerOutlier"] = isLowerOutlier
+                        yield_record["isUpperOutlier"] = isUpperOutlier
 
-                # add run_time
-                yield_record["run_time"] = round(time.time() - search_start, 3)
-                logging.info(
-                    "Check ML Outliers, search executed successfully in %s seconds"
-                    % (time.time() - search_start)
-                )
+                # log and add to yield record
+                ml_message = f"ML investigations results, entity={entity_name}, kpi={self.kpi_name}, current_value={current_value}, lowerBound={lowerBound_value}, upperBound={upperBound_value}, isLowerOutlier={isLowerOutlier}, isUpperOutlier={isUpperOutlier}, run_time={round(time.time() - search_start, 3)}"
+                logging.info(ml_message)
+                yield_record["ml_message"] = ml_message
 
             except Exception as e:
                 logging.error(f"Failed to execute Splunk search with error: {str(e)}")
                 msg = f'Check ML Outliers, failed to process search, exception="{str(e)}", run_time="{time.time() - search_start}"'
                 logging.error(msg)
                 yield_record["error"] = msg
+
+            # loop trough existing key value pairs in record and add to yield_record
+            for key, value in record.items():
+                yield_record[key] = value
 
             yield yield_record
 
