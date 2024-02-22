@@ -86,7 +86,7 @@ class CheckMLOutliers(StreamingCommand):
 
     span = Option(
         doc="""
-        **Syntax:** **	span=****
+        **Syntax:** **span=****
         **Description:** Time bucket span definition.""",
         require=False,
         default="span=10m",
@@ -139,6 +139,12 @@ class CheckMLOutliers(StreamingCommand):
             # get the time_factor
             try:
                 time_factor = record[self.time_factor]
+                # ensure time_factor in between double quotes, if not add them
+                if not time_factor.startswith('"') and not time_factor.endswith('"'):
+                    time_factor = f'"{time_factor}"'
+                # define the full statement
+                time_factor = f"strftime(_time, {time_factor})"
+
             except:
                 time_factor = None
 
@@ -162,13 +168,14 @@ class CheckMLOutliers(StreamingCommand):
             search_query = f'| mstats avg({self.kpi_name}) as {self.kpi_name} where index="{self.metric_index}" entity="{entity_name}" by entity {span}'
 
             if time_factor:
-                search_query += f"""| eval factor={time_factor}"""
-                search_query += f"""| fit DensityFunction {self.kpi_name} lower_threshold=0.005 upper_threshold=0.005 by factor"""
+                search_query += f"""\n| eval factor={time_factor}"""
+                search_query += f"""\n| fit DensityFunction {self.kpi_name} lower_threshold=0.005 upper_threshold=0.005 by factor"""
             else:
-                search_query += f"""| fit DensityFunction {self.kpi_name} lower_threshold=0.005 upper_threshold=0.005"""
+                search_query += f"""\n| fit DensityFunction {self.kpi_name} lower_threshold=0.005 upper_threshold=0.005"""
 
             search_query = remove_leading_spaces(
-                f"""{search_query}
+                f"""\
+                {search_query}
                 | rex field=BoundaryRanges "(-Infinity:(?<LowerBound>[\d|\.]*))|((?<UpperBound>[\d|\.]*):Infinity)"
                 | foreach LowerBound UpperBound [ eval <<FIELD>> = if(isnum('<<FIELD>>'), '<<FIELD>>', 0) ]
                 | fields _time {self.kpi_name} LowerBound UpperBound

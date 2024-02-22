@@ -3,85 +3,6 @@
         "configuration": {
             "tabs": [
                 {
-                    "name": "account",
-                    "table": {
-                        "actions": [
-                            "edit",
-                            "delete",
-                            "clone"
-                        ],
-                        "header": [
-                            {
-                                "label": "Name",
-                                "field": "name"
-                            },
-                            {
-                                "label": "Auth Type",
-                                "field": "auth_type"
-                            }
-                        ]
-                    },
-                    "entity": [
-                        {
-                            "type": "text",
-                            "label": "Name",
-                            "validators": [
-                                {
-                                    "type": "string",
-                                    "errorMsg": "Length of ID should be between 1 and 50",
-                                    "minLength": 1,
-                                    "maxLength": 50
-                                },
-                                {
-                                    "type": "regex",
-                                    "errorMsg": "Name must begin with a letter and consist exclusively of lower case alphanumeric characters and underscores.",
-                                    "pattern": "^[0-9a-z_]*$"
-                                }
-                            ],
-                            "options": {
-                                "placeholder": "Required"
-                            },
-                            "field": "name",
-                            "help": "Enter a unique name for this Splunk remote environment. (lower case alphanumeric characters and underscores)",
-                            "required": true
-                        },
-                        {
-                            "type": "text",
-                            "label": "Splunk target URL and port",
-                            "help": "https://mysplunk.mydomain.com:8089 (SSL is enforced, the URL will be prefixed with https:// if not set), the URL can be based on IP or FQDN",
-                            "field": "splunk_url",
-                            "required": true,
-                            "options": {
-                                "display": true
-                            }
-                        },
-                        {
-                            "type": "text",
-                            "label": "Bearer token",
-                            "help": "For client instances, set the bearer token used for remote access to the KVstore instance",
-                            "field": "bearer_token",
-                            "options": {
-                                "display": true
-                            },
-                            "defaultValue": "",
-                            "encrypted": true,
-                            "required": true
-                        },
-                        {
-                            "type": "text",
-                            "label": "Application namespace",
-                            "help": "The Splunk application namespace on the remote system where searches will be executed, defaults to the Splunk search app",
-                            "field": "app_namespace",
-                            "options": {
-                                "display": true
-                            },
-                            "defaultValue": "search",
-                            "required": true
-                        }
-                    ],
-                    "title": "Remote Splunk deployments accounts"
-                },
-                {
                     "name": "logging",
                     "entity": [
                         {
@@ -222,7 +143,7 @@
     "meta": {
         "name": "TA-check-mloutlier",
         "restRoot": "ta_check_mloutlier",
-        "version": "1.0.0",
+        "version": "1.0.1",
         "displayName": "Splunk Check ML Outliers",
         "schemaVersion": "0.0.3"
     }
